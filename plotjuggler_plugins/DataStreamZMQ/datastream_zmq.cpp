@@ -12,8 +12,8 @@
 
 using namespace PJ;
 
-StreamZMQDialog::StreamZMQDialog(QWidget *parent)
-    : QDialog(parent), ui(new Ui::DataStreamZMQ)
+StreamZMQDialog::StreamZMQDialog(QWidget* parent)
+  : QDialog(parent), ui(new Ui::DataStreamZMQ)
 {
   ui->setupUi(this);
   ui->lineEditPort->setValidator(new QIntValidator());
@@ -30,14 +30,16 @@ StreamZMQDialog::~StreamZMQDialog()
 }
 
 DataStreamZMQ::DataStreamZMQ()
-    : _running(false), _zmq_context(),
-      _zmq_socket(_zmq_context, zmq::socket_type::sub)
+  : _running(false), _zmq_context(), _zmq_socket(_zmq_context, zmq::socket_type::sub)
 {
 }
 
-DataStreamZMQ::~DataStreamZMQ() { shutdown(); }
+DataStreamZMQ::~DataStreamZMQ()
+{
+  shutdown();
+}
 
-bool DataStreamZMQ::start(QStringList *)
+bool DataStreamZMQ::start(QStringList*)
 {
   if (_running)
   {
@@ -46,19 +48,17 @@ bool DataStreamZMQ::start(QStringList *)
 
   if (parserFactories() == nullptr || parserFactories()->empty())
   {
-    QMessageBox::warning(
-        nullptr, tr("UDP Server"), tr("No available MessageParsers"),
-        QMessageBox::Ok
-    );
+    QMessageBox::warning(nullptr, tr("UDP Server"), tr("No available MessageParsers"),
+                         QMessageBox::Ok);
     _running = false;
     return false;
   }
 
   bool ok = false;
 
-  StreamZMQDialog *dialog = new StreamZMQDialog();
+  StreamZMQDialog* dialog = new StreamZMQDialog();
 
-  for (const auto &it : *parserFactories())
+  for (const auto& it : *parserFactories())
   {
     dialog->ui->comboBoxProtocol->addItem(it.first);
 
@@ -71,31 +71,25 @@ bool DataStreamZMQ::start(QStringList *)
 
   // load previous values
   QSettings settings;
-  QString address =
-      settings.value("ZMQ_Subscriber::address", "localhost").toString();
-  QString protocol =
-      settings.value("ZMQ_Subscriber::protocol", "JSON").toString();
+  QString address = settings.value("ZMQ_Subscriber::address", "localhost").toString();
+  QString protocol = settings.value("ZMQ_Subscriber::protocol", "JSON").toString();
   QString topics = settings.value("ZMQ_Subscriber::topics", "").toString();
-  _is_connect    = settings.value("ZMQ_Subscriber::is_connect", true).toBool();
+  _is_connect = settings.value("ZMQ_Subscriber::is_connect", true).toBool();
 
   QString previous_address = address;
 
-  connect(
-      dialog->ui->radioConnect, &QRadioButton::toggled, dialog,
-      [&](bool toggled)
-      {
-        dialog->ui->lineEditAddress->setEnabled(toggled);
-        if (toggled)
-        {
-          dialog->ui->lineEditAddress->setText(previous_address);
-        }
-        else
-        {
-          previous_address = dialog->ui->lineEditAddress->text();
-          dialog->ui->lineEditAddress->setText("0.0.0.0");
-        }
-      }
-  );
+  connect(dialog->ui->radioConnect, &QRadioButton::toggled, dialog, [&](bool toggled) {
+    dialog->ui->lineEditAddress->setEnabled(toggled);
+    if (toggled)
+    {
+      dialog->ui->lineEditAddress->setText(previous_address);
+    }
+    else
+    {
+      previous_address = dialog->ui->lineEditAddress->text();
+      dialog->ui->lineEditAddress->setText("0.0.0.0");
+    }
+  });
 
   if (_is_connect)
   {
@@ -112,26 +106,23 @@ bool DataStreamZMQ::start(QStringList *)
   dialog->ui->lineEditPort->setText(QString::number(port));
   dialog->ui->lineEditTopics->setText(topics);
 
-  connect(
-      dialog->ui->comboBoxProtocol,
-      qOverload<const QString &>(&QComboBox::currentIndexChanged), this,
-      [&](const QString &selected_protocol)
-      {
-        if (_parser_creator)
-        {
-          if (auto prev_widget = _parser_creator->optionsWidget())
-          {
-            prev_widget->setVisible(false);
-          }
-        }
-        _parser_creator = parserFactories()->at(selected_protocol);
+  connect(dialog->ui->comboBoxProtocol,
+          qOverload<const QString&>(&QComboBox::currentIndexChanged), this,
+          [&](const QString& selected_protocol) {
+            if (_parser_creator)
+            {
+              if (auto prev_widget = _parser_creator->optionsWidget())
+              {
+                prev_widget->setVisible(false);
+              }
+            }
+            _parser_creator = parserFactories()->at(selected_protocol);
 
-        if (auto widget = _parser_creator->optionsWidget())
-        {
-          widget->setVisible(true);
-        }
-      }
-  );
+            if (auto widget = _parser_creator->optionsWidget())
+            {
+              widget->setVisible(true);
+            }
+          });
 
   dialog->ui->comboBoxProtocol->setCurrentText(protocol);
 
@@ -142,10 +133,10 @@ bool DataStreamZMQ::start(QStringList *)
     return false;
   }
 
-  address     = dialog->ui->lineEditAddress->text();
-  port        = dialog->ui->lineEditPort->text().toUShort(&ok);
-  protocol    = dialog->ui->comboBoxProtocol->currentText();
-  topics      = dialog->ui->lineEditTopics->text();
+  address = dialog->ui->lineEditAddress->text();
+  port = dialog->ui->lineEditPort->text().toUShort(&ok);
+  protocol = dialog->ui->comboBoxProtocol->currentText();
+  topics = dialog->ui->lineEditTopics->text();
   _is_connect = dialog->ui->radioConnect->isChecked();
 
   _parser = _parser_creator->createParser({}, {}, {}, dataMap());
@@ -157,8 +148,8 @@ bool DataStreamZMQ::start(QStringList *)
   settings.setValue("ZMQ_Subscriber::topics", topics);
   settings.setValue("ZMQ_Subscriber::is_connect", _is_connect);
 
-  QString addr = dialog->ui->comboBox->currentText() + address + ":" +
-                 QString::number(port);
+  QString addr =
+      dialog->ui->comboBox->currentText() + address + ":" + QString::number(port);
   _socket_address = addr.toStdString();
   if (_is_connect)
   {
@@ -173,15 +164,14 @@ bool DataStreamZMQ::start(QStringList *)
   subscribeTopics();
 
   // Add a parser for each topic
-  for (const auto &topic : _topic_filters)
+  for (const auto& topic : _topic_filters)
   {
     _parsers[topic] = _parser_creator->createParser(topic, {}, {}, dataMap());
   }
 
   _zmq_socket.set(zmq::sockopt::rcvtimeo, 100);
 
-  qDebug() << "ZMQ listening on address"
-           << QString::fromStdString(_socket_address);
+  qDebug() << "ZMQ listening on address" << QString::fromStdString(_socket_address);
   _running = true;
 
   _receive_thread = std::thread(&DataStreamZMQ::receiveLoop, this);
@@ -221,16 +211,35 @@ void DataStreamZMQ::receiveLoop()
     zmq::message_t recv_msg;
     zmq::recv_result_t result = _zmq_socket.recv(recv_msg);
 
-    // First part is the topic
-    std::string topic;
-    if (recv_msg.size() > 0)
+    // If we did not receive anything, continue
+    if (recv_msg.size() <= 0)
     {
-      topic = std::string(
-          reinterpret_cast<const char *>(recv_msg.data()), recv_msg.size()
-      );
+      continue;
     }
 
-    // Second part is the payload
+    // If there are more parts, then it is the topic
+    std::string topic = "";
+    if (recv_msg.more())
+    {
+      topic =
+          std::string(reinterpret_cast<const char*>(recv_msg.data()), recv_msg.size());
+
+      // Then it is the payload
+      recv_msg.rebuild();
+      result = _zmq_socket.recv(recv_msg);
+
+      // If we did not receive anything, continue
+      if (recv_msg.size() <= 0)
+      {
+        continue;
+      }
+    }
+
+    PJ::MessageRef msg{ PJ::MessageRef(reinterpret_cast<uint8_t*>(recv_msg.data()),
+                                       recv_msg.size()) };
+
+    // If there are more parts, then it is the timestamp
+    double timestamp = 0.0;
     if (recv_msg.more())
     {
       recv_msg.rebuild();
@@ -238,41 +247,34 @@ void DataStreamZMQ::receiveLoop()
 
       if (recv_msg.size() > 0)
       {
-        PJ::MessageRef msg(
-            reinterpret_cast<uint8_t *>(recv_msg.data()), recv_msg.size()
-        );
+        // The timestamp is the seconds since the epoch as a string
+        timestamp = std::stod(
+            std::string(reinterpret_cast<const char*>(recv_msg.data()), recv_msg.size()));
+      }
+    }
+    else
+    {
+      // If there are no more parts, the timestamp is the current time
+      timestamp = std::chrono::duration_cast<std::chrono::microseconds>(
+                      std::chrono::high_resolution_clock::now().time_since_epoch())
+                      .count() *
+                  1e-6;
+    }
 
-        // The third part is the timestamp (optional)
-        double msg_timestamp = 0.0;
-        if (recv_msg.more())
-        {
-          recv_msg.rebuild();
-          result = _zmq_socket.recv(recv_msg);
-
-          if (recv_msg.size() > 0)
-          {
-            // The timestamp is the milliseconds since the epoch as a string
-            msg_timestamp = std::stod(std::string(
-                                reinterpret_cast<const char *>(recv_msg.data()),
-                                recv_msg.size()
-                            )) *
-                            1e-3;
-          }
-        }
-        else
-        {
-          auto ts =
-              std::chrono::high_resolution_clock::now().time_since_epoch();
-          double msg_timestamp =
-              1e-6 *
-              double(std::chrono::duration_cast<std::chrono::microseconds>(ts)
-                         .count());
-        }
-
-        if (parseMessage(topic, msg, msg_timestamp))
-        {
-          emit this->dataReceived();
-        }
+    // Parse the message without a topic if it is empty
+    if (topic.empty())
+    {
+      if (parseMessage(msg, timestamp))
+      {
+        emit this->dataReceived();
+      }
+    }
+    // Otherwise, parse the message with the topic
+    else
+    {
+      if (parseMessage(topic, msg, timestamp))
+      {
+        emit this->dataReceived();
       }
     }
 
@@ -285,9 +287,22 @@ void DataStreamZMQ::receiveLoop()
   }
 }
 
-bool DataStreamZMQ::parseMessage(
-    const std::string &topic, const PJ::MessageRef &msg, double &timestamp
-)
+bool DataStreamZMQ::parseMessage(const PJ::MessageRef& msg, double& timestamp)
+{
+  try
+  {
+    std::lock_guard<std::mutex> lock(mutex());
+    _parser->parseMessage(msg, timestamp);
+    return true;
+  }
+  catch (...)
+  {
+    return false;
+  }
+}
+
+bool DataStreamZMQ::parseMessage(const std::string& topic, const PJ::MessageRef& msg,
+                                 double& timestamp)
 {
   try
   {
@@ -307,7 +322,7 @@ bool DataStreamZMQ::parseMessage(
   }
 }
 
-void DataStreamZMQ::parseTopicFilters(const QString &topic_filters)
+void DataStreamZMQ::parseTopicFilters(const QString& topic_filters)
 {
   const QRegExp regex("(,{0,1}\\s+)|(;\\s*)");
 
@@ -315,7 +330,7 @@ void DataStreamZMQ::parseTopicFilters(const QString &topic_filters)
   {
     const auto splitted = topic_filters.split(regex);
 
-    for (const auto &topic : splitted)
+    for (const auto& topic : splitted)
     {
       _topic_filters.push_back(topic.toStdString());
     }
@@ -328,7 +343,7 @@ void DataStreamZMQ::parseTopicFilters(const QString &topic_filters)
 
 void DataStreamZMQ::subscribeTopics()
 {
-  for (const auto &topic : _topic_filters)
+  for (const auto& topic : _topic_filters)
   {
     qDebug() << "ZMQ Subscribed topic" << QString::fromStdString(topic);
 
@@ -338,7 +353,7 @@ void DataStreamZMQ::subscribeTopics()
 
 void DataStreamZMQ::unsubscribeTopics()
 {
-  for (const auto &topic : _topic_filters)
+  for (const auto& topic : _topic_filters)
   {
     qDebug() << "ZMQ Unsubscribed topic" << QString::fromStdString(topic);
 

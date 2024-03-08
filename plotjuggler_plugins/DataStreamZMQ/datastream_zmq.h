@@ -15,10 +15,10 @@ class StreamZMQDialog : public QDialog
   Q_OBJECT
 
 public:
-  explicit StreamZMQDialog(QWidget *parent = nullptr);
+  explicit StreamZMQDialog(QWidget* parent = nullptr);
   ~StreamZMQDialog();
 
-  Ui::DataStreamZMQ *ui;
+  Ui::DataStreamZMQ* ui;
 };
 
 class DataStreamZMQ : public PJ::DataStreamer
@@ -32,15 +32,24 @@ public:
 
   virtual ~DataStreamZMQ() override;
 
-  virtual bool start(QStringList *) override;
+  virtual bool start(QStringList*) override;
 
   virtual void shutdown() override;
 
-  virtual bool isRunning() const override { return _running; }
+  virtual bool isRunning() const override
+  {
+    return _running;
+  }
 
-  virtual const char *name() const override { return "ZMQ Subscriber"; }
+  virtual const char* name() const override
+  {
+    return "ZMQ Subscriber";
+  }
 
-  virtual bool isDebugPlugin() override { return false; }
+  virtual bool isDebugPlugin() override
+  {
+    return false;
+  }
 
 private:
   bool _running;
@@ -54,10 +63,10 @@ private:
   PJ::ParserFactoryPlugin::Ptr _parser_creator;
   bool _is_connect = false;
   void receiveLoop();
-  bool parseMessage(
-      const std::string &topic, const PJ::MessageRef &msg, double &timestamp
-  );
-  void parseTopicFilters(const QString &filters);
+  bool parseMessage(const PJ::MessageRef& msg, double& timestamp);
+  bool parseMessage(const std::string& topic, const PJ::MessageRef& msg,
+                    double& timestamp);
+  void parseTopicFilters(const QString& filters);
   void subscribeTopics();
   void unsubscribeTopics();
 };
