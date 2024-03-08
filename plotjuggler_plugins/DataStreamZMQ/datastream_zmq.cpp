@@ -221,6 +221,7 @@ void DataStreamZMQ::receiveLoop()
     zmq::message_t recv_msg;
     zmq::recv_result_t result = _zmq_socket.recv(recv_msg);
 
+    // First part is the topic
     std::string topic;
     if (recv_msg.size() > 0)
     {
@@ -229,6 +230,7 @@ void DataStreamZMQ::receiveLoop()
       );
     }
 
+    // Second part is the payload
     if (recv_msg.more())
     {
       recv_msg.rebuild();
@@ -236,22 +238,45 @@ void DataStreamZMQ::receiveLoop()
 
       if (recv_msg.size() > 0)
       {
-        using namespace std::chrono;
-        auto ts = high_resolution_clock::now().time_since_epoch();
-        double timestamp =
-            1e-6 * double(duration_cast<microseconds>(ts).count());
-
         PJ::MessageRef msg(
             reinterpret_cast<uint8_t *>(recv_msg.data()), recv_msg.size()
         );
-        if (parseMessage(topic, msg, timestamp))
+
+        // The third part is the timestamp (optional)
+        double msg_timestamp = 0.0;
+        if (recv_msg.more())
+        {
+          recv_msg.rebuild();
+          result = _zmq_socket.recv(recv_msg);
+
+          if (recv_msg.size() > 0)
+          {
+            // The timestamp is the milliseconds since the epoch as a string
+            msg_timestamp = std::stod(std::string(
+                                reinterpret_cast<const char *>(recv_msg.data()),
+                                recv_msg.size()
+                            )) *
+                            1e-3;
+          }
+        }
+        else
+        {
+          auto ts =
+              std::chrono::high_resolution_clock::now().time_since_epoch();
+          double msg_timestamp =
+              1e-6 *
+              double(std::chrono::duration_cast<std::chrono::microseconds>(ts)
+                         .count());
+        }
+
+        if (parseMessage(topic, msg, msg_timestamp))
         {
           emit this->dataReceived();
         }
       }
     }
 
-    // Extinguish remaining messages (if any)
+    // Extinguish remaining parts (if any)
     while (recv_msg.more())
     {
       recv_msg.rebuild();
